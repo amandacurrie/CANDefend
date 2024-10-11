@@ -1,29 +1,18 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "hardware/irq.h"
-#include "RP2040.h"
 #include "pico/stdlib.h"
 #include "can2040/src/can2040.h"
 
 static struct can2040 cbus;
-bool messageReceived = false;
+bool messageSent = false;
 
 static void
 can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg)
 {
-    messageReceived = true;
-    // Add message processing code here...
-    printf("Message received\nId: %d\nMessage: %s\n", msg->id, msg->data);
-    for( int i = 0; i < 5; i++ ) {
-        //cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-        sleep_ms(500);
-        //cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-        sleep_ms(500);
-    }
+    messageSent = true;
+    printf( "Message sent: %s\n", msg->data);
 }
 
 static void
@@ -59,12 +48,22 @@ int main() {
     // Sets up rx and tx, starts can bus
     canbus_setup();
 
-    // Loop until report state 
-    while( !messageReceived ) {
+    
+    // Message to test transmitting and receiving
+    char str[8] = "Test";
+    // message id is the priority, 0 is greatest priority
+    struct can2040_msg msg = { .dlc = strlen(str), .id = 0};
+    memcpy( msg.data, str, msg.dlc);
+
+    while( !messageSent) {
+        if ( can2040_check_transmit && can2040_transmit( &cbus, &msg ) != 0 ) {
+            printf( "Error transmitting message\n" );
+            return 1;
+        }
         sleep_ms(1000);
     }
-
-
+  
+    // stop can bus
     can2040_stop( &cbus );
     return 0;
 }
