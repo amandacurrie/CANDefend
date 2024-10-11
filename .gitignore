@@ -1,5 +1,2 @@
-# Ignore VSCode settings
 .vscode/
-
-# Ignore build files
 build/
